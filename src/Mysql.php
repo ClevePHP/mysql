@@ -1,13 +1,13 @@
 <?php
 /** 
-* 文件名(Mysql.php) 
-* 
-* 功能描述（略） 
-* 
-* @author steve <ceiba_@126.com> 
-* @version 1.0 
-* @package sample2 
-*/  
+ * 文件名(Mysql.php) 
+ * 
+ * 功能描述（略） 
+ * 
+ * @author steve <ceiba_@126.com> 
+ * @version 1.0 
+ * @package sample2 
+ */
 namespace ClevePHP\Extension\mysql;
 
 class Mysql
@@ -112,6 +112,10 @@ class Mysql
 
     public function getDrive()
     {
+        if ($this->config->autoReconnect === true && ($this->drive->errno === 2006 || $this->drive->errno === 2013)) {
+            $this->setConfig($this->config);
+            return $this->getDrive();
+        }
         return $this->drive;
     }
 }
