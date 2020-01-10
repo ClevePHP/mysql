@@ -1,0 +1,28 @@
+{
+  "name": "clevephp/mysql", 
+  "description": "ClevePHP mservice Drives",  
+  "keywords": [  
+    "mysql",
+    "mservice"
+  ],
+  "type": "library",  
+  "require": {
+    "php": "^7.0"
+  },
+  "require-dev": {
+    "php": "^7.0"
+  },
+  "minimum-stability": "dev",
+  "license" : "Apache-2.0",
+  "authors": [  
+    {
+      "name": "ceiba",
+      "email": "ceiba_@126.com"
+    }
+  ],
+  "autoload": {  
+    "psr-4": {
+      "ClevePHP\\Extension\\mysql\\": "src/"
+    }
+  }
+}
