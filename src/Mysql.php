@@ -1,4 +1,5 @@
 <?php
+
 /** 
  * 文件名(Mysql.php) 
  * 
@@ -49,13 +50,18 @@ class Mysql
     }
 
     public function getConfig(): ?\ClevePHP\Extension\mysql\Config
+    
     {
         return $this->config;
     }
 
     private function _init(\ClevePHP\Extension\mysql\Config $config = null)
     {
-        $this->_mysqli($config);
+        if ($this->config->isCoroutine) {
+            $this->_swooleMysql($config);
+        } else {
+            $this->_mysqli($config);
+        }
     }
 
     private function _swooleMysql(\ClevePHP\Extension\mysql\Config $config = null)
@@ -69,6 +75,7 @@ class Mysql
             'user' => $this->getConfig()->user,
             'password' => $this->getConfig()->password,
             'database' => $this->getConfig()->dbname,
+            "fetch_mode" => $this->getConfig()->fetchMode,
             'charset' => $this->getConfig()->charset ?? "utf8mb4"
         ]);
         $this->drive = $client;
@@ -89,14 +96,14 @@ class Mysql
         if (empty($pro['host']) && empty($pro['socket'])) {
             throw new \Exception('MySQL host or socket is not set');
         }
-
+        
         $mysqlic = new \ReflectionClass('mysqli');
         $mysqli = $mysqlic->newInstanceArgs($params);
-
-        if ($mysqli->connect_error) {
+        
+        if ($mysqli->connect_error || ! $mysqli) {
             throw new \Exception('Connect Error ' . $mysqli->connect_errno . ': ' . $mysqli->connect_error, $mysqli->connect_errno);
         }
-
+        
         if (! empty($charset)) {
             $mysqli->set_charset($charset);
         }
@@ -110,6 +117,11 @@ class Mysql
         return $this;
     }
 
+    //关闭
+    public function close(){
+        mysqli_close($this->drive);  
+    }
+    
     public function getDrive()
     {
         if ($this->config->autoReconnect === true && ($this->drive->errno === 2006 || $this->drive->errno === 2013)) {

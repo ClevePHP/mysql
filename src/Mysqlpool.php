@@ -1,4 +1,5 @@
 <?php
+
 /**
  * 文件名(Mysqlpool.php)
  *
@@ -10,100 +11,146 @@
  */
 namespace ClevePHP\Extension\mysql;
 
+use think\db\exception\DbException;
+use Swoole\Coroutine as co;
+use Core\Util\Logger;
+
 class Mysqlpool
 {
 
     private static $instance;
 
-    private function __construct(\ClevePHP\Extension\mysql\Config $config, $tag = null)
+    function __construct($config = null)
     {
-        $this->connect($config, $tag);
+        $this->switchConfig($config);
+        return $this;
     }
 
     private function __clone()
     {}
 
-    private $tag = "default";
-
-    private $connectObjects = [];
+    private $connectObjects;
 
     private $config;
 
-    static public function getInstance(\ClevePHP\Extension\mysql\Config $config, $tag = null)
+    static public function getInstance()
     {
         if (! self::$instance instanceof self) {
-            self::$instance = new self($config, $tag);
+            self::$instance = new self();
         }
         return self::$instance;
     }
 
-    private function connect(\ClevePHP\Extension\mysql\Config $config, $tag = null)
+    public function connect(\ClevePHP\Extension\mysql\Config $config)
     {
-        if ($tag) {
-            $this->tag = $tag;
-        }
         $this->config = $config;
         if (empty($config)) {
             throw new \Exception("mysql config is null");
         }
         $this->config = $config;
-        if (empty($this->tag)) {
-            $this->tag = "default";
-        }
-        for ($i = 0; $i < $config->maxConnect; $i ++) {
-            $this->connectObjects[$this->tag][] = \ClevePHP\Extension\mysql\Mysql::getInstance()->setConfig($config)->getDrive();
+        $this->config->maxConnect = 1;
+        $this->connectObjects = [];
+        for ($i = 0; $i <= $config->maxConnect; $i ++) {
+            $db = $this->dbObject($config);
+            if ($db) {
+                $this->connectObjects[] = $db;
+            }
         }
         return $this;
     }
 
-    public function switchConfig(\ClevePHP\Extension\mysql\Config $config, $tag = null)
+    private function dbObject($config)
     {
-        $this->connect($config, $tag);
+        $db = \ClevePHP\Extension\mysql\Mysql::getInstance()->setConfig($config)->getDrive();
+        if (($db->errno != 2006 && $db->errno != 2013)) {
+            return $db;
+        }
+    }
+
+    public function switchConfig(\ClevePHP\Extension\mysql\Config $config)
+    {
+        $this->connect($config);
         return $this;
     }
 
-    public function setTag($tag)
+    public function closes()
     {
-        $this->tag = $tag;
-        return $this;
-    }
-    public function closes($tag)
-    {
-        if ($tag) {
-            $this->tag = $tag;
-        }
-        if (empty($this->connectObjects[$this->tag])) {
+        if (! $this->connectObjects) {
             return false;
         }
-
-        foreach ($this->connectObjects[$this->tag] as $key => $value) {
-            mysqli_close($value);
-            unset($this->connectObjects[$this->tag][$key]);
+        for ($i = 0; $i < count($this->connectObjects); $i ++) {
+            $db = array_pop($this->connectObjects);
+            $db->close();
         }
     }
 
-    public function getConnect($tag = null)
+    public function getConnect()
     {
-        if ($tag) {
-            $this->tag = $tag;
+        if (! $this->connectObjects) {
+            return null;
         }
-        if (empty($this->connectObjects[$this->tag])) {
-            return false;
-        }
-        $avilConnectionNum = count($this->connectObjects[$this->tag]);
-        if ($avilConnectionNum == 0 || $avilConnectionNum <= $this->config->miniConnect) {
-            $this->connect($this->config, $this->tag);
-            return $this->getConnect();
+        $avilConnectionNum = count($this->connectObjects);
+        if ($avilConnectionNum == 0 || $avilConnectionNum < $this->config->miniConnect) {
+            $obj = $this->resetCennect();
+            $this->connectObjects[] = $obj;
+            return $obj;
         }
         $mysql = null;
-        $mysql = array_pop($this->connectObjects[$this->tag]);
-        if (! ($mysql->errno === 2006 )) {
-            array_push($this->connectObjects[$this->tag], $mysql);
+        $mysql = array_pop($this->connectObjects);
+        if (! $mysql) {
+            $obj = $this->resetCennect();
+            $this->connectObjects[] = $obj;
+            return $obj;
         }
-        if (($mysql->errno === 2006 || $mysql->errno === 2013) && $this->config->autoReconnect === true) {
-            $this->connect($this->config, $this->tag);
-            return $this->getConnect();
+        if ($mysql && ($mysql->errno != 2006 && $mysql->errno != 2013)) {
+            $this->connectObjects[] = $mysql;
+        }
+        if (($mysql->errno === 2006 || $mysql->errno === 2013) && ($this->config->autoReconnect === true)) {
+            $obj = $this->resetCennect();
+            $this->connectObjects[] = $obj;
+            return $obj;
         }
         return $mysql;
+    }
+
+    // 重新连接
+    private function resetCennect()
+    {
+        try {
+            if ($this->config) {
+                $connect = $this->dbObject($this->config);
+                if ($connect) {
+                    return $connect;
+                }
+                throw new DbException("pool error:mysql conenct failure");
+            }
+            throw new DbException("pool error:config is emtpy");
+        } catch (\Throwable $e) {
+            $this->clears();
+        }
+    }
+
+    // 清理无效的连接
+    public function clears()
+    {
+        if ($this->connectObjects) {
+            for ($i = 0; $i < count($this->connectObjects); $i ++) {
+                $db = array_pop($this->connectObjects);
+                try {
+                    if (! $db->ping() || ! mysqli_ping($db) || $db->errno || mysqli_errno($db) || mysqli_connect_errno($db)) {
+                        echo "清除无效连接" . PHP_EOL;
+                        Logger::echo("mysql to close");
+                        mysqli_close($db);
+                        $db = $this->resetCennect();
+                    }
+                    $this->connectObjects[] = $db;
+                } catch (\Exception $e) {
+                    echo "清除出错" .$e->getMessage(). PHP_EOL;
+                    @mysqli_close($db);
+                    $db = $this->resetCennect();
+                    $this->connectObjects[] = $db;
+                }
+            }
+        }
     }
 }
