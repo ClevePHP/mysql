@@ -79,6 +79,8 @@ class Pdo
             $dsn.=";charset=$charset";
         }
         $pdo = new \PDO($dsn, $user, $pwd);
+        $pdo->setAttribute(\PDO::ATTR_EMULATE_PREPARES, false);
+        $pdo->setAttribute(\PDO::ATTR_STRINGIFY_FETCHES, false);
         $this->drive = $pdo;
         return $pdo;
     }

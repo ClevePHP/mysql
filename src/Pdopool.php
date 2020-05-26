@@ -47,19 +47,24 @@ class Pdopool
         if (empty($config)) {
             throw new \Exception("mysql config is null");
         }
-        if (!$this->connectObjects->isEmpty()){
+        if (! $this->connectObjects->isEmpty()) {
             return $this;
         }
         $this->config = $config;
         
         $this->connectObjects = new co\Channel($this->config->maxConnect + 1);
-//         for ($i = 0; $i <= $config->maxConnect; $i ++) {
-//             $db = $this->dbObject($config);
-//             if ($db) {
-//                 $this->connectObjects->push($db);
-//             }
-//         }
-        $db = $this->dbObject($config);
+        $db = null;
+        if ($this->config->maxConnect > 1) {
+            for ($i = 0; $i <= $config->maxConnect; $i ++) {
+                $db = $this->dbObject($config);
+                if ($db) {
+                    $this->connectObjects->push($db);
+                }
+            }
+        } else {
+            $db = $this->dbObject($config);
+        }
+        
         if ($db) {
             $this->connectObjects->push($db);
         }
@@ -129,7 +134,7 @@ class Pdopool
                 try {
                     $db->getAttribute(\PDO::ATTR_SERVER_INFO);
                 } catch (\PDOException $e) {
-                    if (strpos($db->getMessage(), 'MySQL server has gone away') !== false) {
+                    if (strpos($db->getMessage(), 'gone away') !== false) {
                         $db = null;
                     }
                 }
