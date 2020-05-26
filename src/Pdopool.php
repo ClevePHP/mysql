@@ -15,7 +15,7 @@ use think\db\exception\DbException;
 use Swoole\Coroutine as co;
 use Core\Util\Logger;
 
-class Mysqlpools
+class Pdopool
 {
 
     private static $instance;
@@ -47,29 +47,36 @@ class Mysqlpools
         if (empty($config)) {
             throw new \Exception("mysql config is null");
         }
+        if (!$this->connectObjects->isEmpty()){
+            return $this;
+        }
         $this->config = $config;
-        $this->config->maxConnect = 1;
+        
         $this->connectObjects = new co\Channel($this->config->maxConnect + 1);
-        for ($i = 0; $i <= $config->maxConnect; $i ++) {
-            $db = $this->dbObject($config);
-            if ($db) {
-                $this->connectObjects->push($db);
-            }
+//         for ($i = 0; $i <= $config->maxConnect; $i ++) {
+//             $db = $this->dbObject($config);
+//             if ($db) {
+//                 $this->connectObjects->push($db);
+//             }
+//         }
+        $db = $this->dbObject($config);
+        if ($db) {
+            $this->connectObjects->push($db);
         }
         return $this;
     }
 
     private function dbObject($config)
     {
-        $db = \ClevePHP\Extension\mysql\Mysql::getInstance()->setConfig($config)->getDrive();
-        if (($db->errno != 2006 && $db->errno != 2013)) {
-            return $db;
-        }
+        $db = \ClevePHP\Extension\mysql\Pdo::getInstance()->setConfig($config)->getDrive();
+        return $db;
     }
 
     public function switchConfig(\ClevePHP\Extension\mysql\Config $config)
     {
-        $this->connect($config);
+        if ($this->connectObjects->isEmpty()) {
+            $this->connect($config);
+        }
         return $this;
     }
 
@@ -105,7 +112,7 @@ class Mysqlpools
                 if ($connect) {
                     return $connect;
                 }
-                throw new DbException("pool error:mysql conenct failure");
+                throw new DbException("pool error:pdo conenct failure");
             }
             throw new DbException("pool error:config is emtpy");
         } catch (\Throwable $e) {
@@ -119,14 +126,18 @@ class Mysqlpools
         if ($this->connectObjects) {
             for ($i = 0; $i < $this->connectObjects->length(); $i ++) {
                 $db = $this->connectObjects->pop();
-                if (! $db->ping() || ! mysqli_ping($db) || $db->errno || mysqli_errno($db) || mysqli_connect_errno($db)) {
-                   echo "清除无效连接".PHP_EOL;
-                    Logger::echo("mysql to close");
-                    mysqli_close($db);
-                    $db = $this->resetCennect();
-                } 
-                $this->connectObjects->push($db);
+                try {
+                    $db->getAttribute(\PDO::ATTR_SERVER_INFO);
+                } catch (\PDOException $e) {
+                    if (strpos($db->getMessage(), 'MySQL server has gone away') !== false) {
+                        $db = null;
+                    }
+                }
+                if ($db) {
+                    $this->connectObjects->push($db);
+                }
             }
         }
     }
 }
+

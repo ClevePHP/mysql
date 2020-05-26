@@ -4,7 +4,7 @@
  * 文件名(Relolver.php) 
  * 
  * 功能描述（略） 
- * --mysql主义转换
+ * --mysql转义
  * @author steve <ceiba_@126.com> 
  * @version 1.0 
  * @package sample2 

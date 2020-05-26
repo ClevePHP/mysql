@@ -48,7 +48,6 @@ class Mysqlpool
             throw new \Exception("mysql config is null");
         }
         $this->config = $config;
-        $this->config->maxConnect = 1;
         $this->connectObjects = [];
         for ($i = 0; $i <= $config->maxConnect; $i ++) {
             $db = $this->dbObject($config);

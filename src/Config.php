@@ -30,6 +30,8 @@ class Config {
 	public $isCoroutine = false;
 	public $fetchMode = true;
 	public $version=0;
+	public $pdoModel=1;
+	public $dbProxy="ks";
 	public function loadConfig($config = []) {
 		if ($config) {
 			$this->host = isset ( $config ["host"] ) ? $config ["host"] : $this->host;
@@ -48,6 +50,8 @@ class Config {
 			$this->isCoroutine = isset ( $config ["is_coroutine"] ) ? $config ["is_coroutine"] : $this->isCoroutine;
 			$this->fetchMode = isset ( $config ["fetch_mode"] ) ? $config ["fetch_mode"] : $this->fetchMode;
 			$this->version = isset ( $config ["version"] ) ? $config ["version"] : $this->version;
+			$this->pdoModel = isset ( $config ["pdo_model"] ) ? $config ["pdo_model"] : $this->pdoModel;
+			$this->dbProxy = isset ( $config ["db_proxy"] ) ? $config ["db_proxy"] : $this->dbProxy;
 			
 		}
 		return $this;
