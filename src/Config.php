@@ -31,6 +31,7 @@ class Config {
 	public $pdoModel=1;
 	public $dbProxy="ks";
 	public $debugMode=1;
+	public $isPrepares=0; 
 	public function loadConfig($config = []) {
 		if ($config) {
 			$this->host = isset ( $config ["host"] ) ? $config ["host"] : $this->host;
@@ -52,6 +53,7 @@ class Config {
 			$this->pdoModel = isset ( $config ["pdo_model"] ) ? $config ["pdo_model"] : $this->pdoModel;
 			$this->dbProxy = isset ( $config ["db_proxy"] ) ? $config ["db_proxy"] : $this->dbProxy;
 			$this->debugMode = isset ( $config ["debug_mode"] ) ? $config ["debug_mode"] : $this->debugMode;
+			$this->isPrepares = isset ( $config ["is_prepares"] ) ? $config ["is_prepares"] : $this->isPrepares;
 			
 		}
 		return $this;
