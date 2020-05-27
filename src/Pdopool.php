@@ -51,10 +51,9 @@ class Pdopool
             return $this;
         }
         $this->config = $config;
-        
-        $this->connectObjects = new co\Channel($this->config->maxConnect + 1);
+        $this->connectObjects = new co\Channel($this->config->maxConnect * 3);
         $db = null;
-        if ($this->config->maxConnect > 1) {
+        if ($this->config->maxConnect > 2) {
             for ($i = 0; $i <= $config->maxConnect; $i ++) {
                 $db = $this->dbObject($config);
                 if ($db) {
@@ -79,9 +78,7 @@ class Pdopool
 
     public function switchConfig(\ClevePHP\Extension\mysql\Config $config)
     {
-        if ($this->connectObjects->isEmpty()) {
-            $this->connect($config);
-        }
+        $this->connect($config);
         return $this;
     }
 

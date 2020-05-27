@@ -1174,11 +1174,7 @@ class Pdorelolver
                 $this->traceStartQ = microtime(true);
             return $stmt;
         }
-        $error = $this->_mysqli->error;
-        $query = $this->_query;
-        $errno = $this->_mysqli->errno;
         $this->reset();
-        throw new \Exception(sprintf('%s query: %s', $error, $query), $errno);
     }
 
     protected function refValues(array &$arr)
