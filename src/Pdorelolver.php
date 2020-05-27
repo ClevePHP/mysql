@@ -322,11 +322,13 @@ class Pdorelolver
         }
         return $this;
     }
-    public function setAnnotationType($type){
-        $this->annotationType=$type;
+
+    public function setAnnotationType($type)
+    {
+        $this->annotationType = $type;
         return $this;
     }
-    
+
     // smproxy 模式下强制使用读库
     public function read()
     {
@@ -718,10 +720,13 @@ class Pdorelolver
         $this->_orderBy[$orderByField] = $orderbyDirection;
         return $this;
     }
-    public function close(){
-        $this->_mysqli=null;
-        $this->dbobject=null;
+
+    public function close()
+    {
+        $this->_mysqli = null;
+        $this->dbobject = null;
     }
+
     public function groupBy($groupByField)
     {
         $groupByField = preg_replace("/[^-a-z0-9\.\(\),_\* <>=!]+/i", '', $groupByField);
@@ -940,12 +945,37 @@ class Pdorelolver
         return $stmt;
     }
 
-    protected function _dynamicBindResults($stmt)
+    protected function _dynamicBindResults($stm)
     {
-        $stmt->setFetchMode(\PDO::FETCH_ASSOC);
-        $result = $stmt->fetchAll();
-        $this->count =count($result);
-        return $result;
+        $array = [];
+        
+        while ($fila = $stm->fetch(\PDO::FETCH_ASSOC)) {
+            $i = 0;
+            foreach ($fila as $key => $value) {
+                $columnMeta = $stm->getColumnMeta($i);
+                
+                switch ($columnMeta['native_type']) {
+                    case 'LONG':
+                        $fila[$key] = intval($value);
+                        break;
+                    case 'TINY':
+                        $fila[$key] = intval($value);
+                        break;
+                    case 'DOUBLE':
+                        $fila[$key] = floatval($value);
+                        break;
+                    default:
+                        $fila[$key] = $value;
+                        break;
+                }
+                
+                $i ++;
+            }
+            
+            $array[] = $fila;
+        }
+        $this->count=count($array);
+        return $array;
     }
 
     private function mysqli()
