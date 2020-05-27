@@ -19,16 +19,14 @@ class Pdopool
 {
 
     private static $instance;
-
-    function __construct()
+    function __construct($config = null)
     {
         $this->connectObjects = new co\Channel();
+        if ($config){
+            $this->switchConfig($config);
+        }
         return $this;
     }
-
-    private function __clone()
-    {}
-
     private $connectObjects;
 
     private $config;
@@ -36,7 +34,7 @@ class Pdopool
     static public function getInstance()
     {
         if (! self::$instance instanceof self) {
-            self::$instance = new self();
+            self::$instance = new self(null);
         }
         return self::$instance;
     }
@@ -89,7 +87,7 @@ class Pdopool
         }
         for ($i = 0; $i < $this->connectObjects->length(); $i ++) {
             $db = $this->connectObjects->pop();
-            $db->close();
+            $db = null;
         }
     }
 
@@ -131,6 +129,7 @@ class Pdopool
                 try {
                     $db->getAttribute(\PDO::ATTR_SERVER_INFO);
                 } catch (\PDOException $e) {
+                    echo "清除连接";
                     if (strpos($db->getMessage(), 'gone away') !== false) {
                         $db = null;
                     }

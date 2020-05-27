@@ -75,12 +75,21 @@ class Pdo
         $port = $this->getConfig()->port;
         // $charset = 'utf8';
         $dsn = "$dbms:host=$host;dbname=$dbName;port=$port";
-        if ($charset){
-            $dsn.=";charset=$charset";
+        if ($charset) {
+            $dsn .= ";charset=$charset";
         }
         $pdo = new \PDO($dsn, $user, $pwd);
         $pdo->setAttribute(\PDO::ATTR_EMULATE_PREPARES, false);
         $pdo->setAttribute(\PDO::ATTR_STRINGIFY_FETCHES, false);
+        if ($config->debugMode) {
+            $errMode = \PDO::ERRMODE_WARNING;
+            if ($config->debugMode == 2) {
+                $errMode = \PDO::ERRMODE_EXCEPTION;
+            } else{
+                $errMode = \PDO::ERRMODE_SILENT;
+            }
+            $pdo->setAttribute(\PDO::ATTR_ERRMODE, $errMode);
+        }
         $this->drive = $pdo;
         return $pdo;
     }
@@ -94,12 +103,11 @@ class Pdo
     // 关闭
     public function close()
     {
-        $this->drive=null;
+        $this->drive = null;
     }
 
     public function getDrive()
     {
-        
         return $this->drive;
     }
 }

@@ -25,10 +25,6 @@ class Mysqlpools
         $this->connectObjects = new co\Channel();
         return $this;
     }
-
-    private function __clone()
-    {}
-
     private $connectObjects;
 
     private $config;

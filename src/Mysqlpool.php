@@ -26,7 +26,7 @@ class Mysqlpool
         return $this;
     }
 
-    private function __clone()
+    function __clone()
     {}
 
     private $connectObjects;

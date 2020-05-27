@@ -944,6 +944,7 @@ class Pdorelolver
     {
         $stmt->setFetchMode(\PDO::FETCH_ASSOC);
         $result = $stmt->fetchAll();
+        $this->count =count($result);
         return $result;
     }
 
